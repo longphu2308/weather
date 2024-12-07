@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'weather_service.dart';
+import 'weather_detail_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   runApp(const WeatherApp());
 }
 
@@ -14,13 +19,16 @@ class WeatherApp extends StatefulWidget {
 
 class _WeatherAppState extends State<WeatherApp> {
   final WeatherService _weatherService = WeatherService();
+  final TextEditingController _cityController = TextEditingController();
   String _city = 'Hanoi';
   Map<String, dynamic>? _weatherData;
+  List<String> _savedCities = [];
 
   @override
   void initState() {
     super.initState();
     _fetchWeather();
+    _loadSavedCities();
   }
 
   void _fetchWeather() async {
@@ -34,6 +42,24 @@ class _WeatherAppState extends State<WeatherApp> {
     }
   }
 
+  void _loadSavedCities() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _savedCities = prefs.getStringList('savedCities') ?? [];
+    });
+  }
+
+  void _saveCityToList() async {
+    if (_cityController.text.isNotEmpty && !_savedCities.contains(_cityController.text)) {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _savedCities.add(_cityController.text);
+        prefs.setStringList('savedCities', _savedCities);
+      });
+      _cityController.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -41,17 +67,15 @@ class _WeatherAppState extends State<WeatherApp> {
       home: Scaffold(
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(60),
-          child: Container(
-            child: AppBar(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    'Weather',
-                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
+          child: AppBar(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  'Weather',
+                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ),
@@ -59,40 +83,51 @@ class _WeatherAppState extends State<WeatherApp> {
           children: [
             Container(
               padding: EdgeInsets.all(16),
-              child: TextField(
-                maxLines: 1,
-                decoration: InputDecoration(hintText: "Search for a city or airport"),
-                onSubmitted: (value) {
-                  setState(() {
-                    _city = value;
-                    _fetchWeather();
-                  });
-                },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _cityController,
+                      maxLines: 1,
+                      decoration: InputDecoration(
+                        hintText: "Search for a city or airport",
+                      ),
+                      onSubmitted: (value) {
+                        setState(() {
+                          _city = value;
+                          _fetchWeather();
+                        });
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle),
+                    onPressed: _saveCityToList,
+                  ),
+                ],
               ),
             ),
             Expanded(
-              child: _weatherData != null
+              child: _savedCities.isNotEmpty
                   ? ListView.builder(
-                      itemCount: 1,
+                      itemCount: _savedCities.length,
                       itemBuilder: (context, index) {
-                        return InkWell(
-                          onTap: () => {},
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.location_on),
-                                SizedBox(width: 16),
-                                Text(_weatherData!['name']),
-                                Spacer(),
-                                Text('${_weatherData!['main']['temp']}°C'),
-                              ],
-                            ),
-                          ),
+                        return ListTile(
+                          title: Text(_savedCities[index]),
+                          trailing: Icon(Icons.chevron_right),
+                          onTap: () async {
+                            final weatherData = await _weatherService.fetchWeather(_savedCities[index]);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WeatherDetailPage(weatherData: weatherData),
+                              ),
+                            );
+                          },
                         );
                       },
                     )
-                  : Center(child: CircularProgressIndicator()),
+                  : Center(child: Text('No saved cities')),
             ),
           ],
         ),
