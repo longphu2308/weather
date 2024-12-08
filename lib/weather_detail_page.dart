@@ -64,6 +64,9 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Lấy chiều cao màn hình
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.weatherData['name']),
@@ -99,19 +102,24 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
           ),
         ],
       ),
-      body: AnimatedContainer(
-        duration: Duration(seconds: 1),
+      body: Container(
         color: _backgroundColor,
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWeatherInfoCard(),
-            SizedBox(height: 20),
-            _buildTemperatureDetails(),
-            SizedBox(height: 20),
-            _buildAdditionalInfo(),
-          ],
+        height: screenHeight, // Chiều cao full màn hình
+        width: double.infinity,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWeatherInfoCard(),
+                SizedBox(height: 20),
+                _buildTemperatureDetails(),
+                SizedBox(height: 20),
+                _buildAdditionalInfo(),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -161,8 +169,8 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
               children: [
                 Text('Temperature', style: TextStyle(fontSize: 18)),
                 Text(
-                  '${widget.weatherData['main']['temp']}°C', 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                  '${widget.weatherData['main']['temp']}°C',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -172,8 +180,8 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
               children: [
                 Text('Feels Like', style: TextStyle(fontSize: 16)),
                 Text(
-                  '${widget.weatherData['main']['feels_like']}°C', 
-                  style: TextStyle(fontSize: 16)
+                  '${widget.weatherData['main']['feels_like']}°C',
+                  style: TextStyle(fontSize: 16),
                 ),
               ],
             ),
